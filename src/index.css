@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
     --background: 222 47% 11%;
@@ -39,58 +35,54 @@ All colors MUST be HSL.
     --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 222 47% 20%;
-
     --sidebar-primary: 222 47% 11%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 45 93% 95%;
-
     --sidebar-accent-foreground: 222 47% 11%;
-
     --sidebar-border: 222 20% 88%;
-
     --sidebar-ring: 45 93% 58%;
   }
 
+  /* Emphasize the dark mode as the premium default */
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 0 0% 98%;
+    --background: 225 35% 8%; /* Deeper, richer midnight blue */
+    --foreground: 210 40% 98%;
 
-    --card: 222 47% 14%;
-    --card-foreground: 0 0% 98%;
+    --card: 222 47% 11%; 
+    --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 14%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 45 93% 58%;
+    /* Premium gold/amber accent for the CA Agent */
+    --primary: 43 96% 56%; 
     --primary-foreground: 222 47% 11%;
 
-    --secondary: 222 47% 18%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 222 47% 18%;
-    --muted-foreground: 0 0% 70%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 45 93% 58%;
+    --accent: 43 96% 56%;
     --accent-foreground: 222 47% 11%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 222 47% 22%;
-    --input: 222 47% 16%;
-    --ring: 45 93% 58%;
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 0 0% 75%;
-    --sidebar-primary: 45 93% 58%;
+    --border: 217 33% 20%;
+    --input: 217 33% 17%;
+    --ring: 43 96% 56%;
+    
+    --sidebar-background: 225 35% 6%; /* Super dark for contrast */
+    --sidebar-foreground: 215 20% 80%;
+    --sidebar-primary: 43 96% 56%;
     --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 222 47% 14%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 222 47% 18%;
-    --sidebar-ring: 45 93% 58%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 15%;
+    --sidebar-ring: 43 96% 56%;
   }
 }
 
@@ -100,6 +92,37 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground tracking-tight;
+    /* Animated subtle gradient background */
+    background: radial-gradient(circle at 50% 0%, hsl(222 47% 15%) 0%, hsl(225 35% 8%) 60%);
+    background-size: cover;
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)];
+  }
+  
+  .glass-panel-heavy {
+    @apply bg-black/40 backdrop-blur-xl border border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)];
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-orange-400;
+  }
+
+  /* Custom scrollbar for sleek look */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
   }
 }

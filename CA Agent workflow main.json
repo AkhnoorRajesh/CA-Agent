@@ -1,0 +1,1202 @@
+{
+  "name": "CA Agent workflow main",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ca-agent",
+        "responseMode": "responseNode",
+        "options": {
+          "binaryPropertyName": "data0",
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1904,
+        656
+      ],
+      "id": "7da376a1-5de5-44b1-a57b-ddc0ecf36a9c",
+      "name": "Receive Invoice Data from the web",
+      "webhookId": "f89cc36b-b4e3-433c-8440-74d4cf66b669",
+      "notes": "The entry point for all data (file or image or text)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a9e1d2c3-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+              "leftValue": "={{ $input.item.binary }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1504,
+        656
+      ],
+      "id": "0b4b3ece-ec5b-4adb-8e5c-ded6a373ce61",
+      "name": "Has File Attached?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => {\n  const bKeys = item.binary ? Object.keys(item.binary) : [];\n  if (bKeys.length) {\n    const realKey = bKeys[0];\n    const { data, mimeType, fileName } = item.binary[realKey];\n\n    // determine fileType...\n    let fileType = 'unknown';\n    if (mimeType.startsWith('image/')) fileType = 'image';\n    else if (mimeType === 'application/pdf') fileType = 'pdf';\n    item.json.fileType = fileType;\n    item.json.mimeType = mimeType;\n\n    // normalize **including** fileName\n    item.binary.data0 = { data, mimeType, fileName };\n  } else {\n    item.json.fileType = 'no_file';\n    item.json.mimeType = 'none';\n  }\n  return item;\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -736,
+        224
+      ],
+      "id": "8d4b8986-f56d-49c9-b00e-c664b533debd",
+      "name": "Detect File Type (Image/PDF)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1a4b7d3-9e2f-4d3a-8b5c-6f7e8d9c0a1b",
+              "leftValue": "={{$json.fileType}}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        224
+      ],
+      "id": "75de3e81-efe4-40dd-b569-992a5481e82a",
+      "name": "is File is image or file"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "data00",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        0,
+        400
+      ],
+      "id": "8320f7e8-d915-4512-89f4-e63b8b93e7b7",
+      "name": "Extract Text from PDF"
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "data00",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1JX6YDlP4xc667Kk0teGkXuR6fmWoKdWM",
+          "mode": "list",
+          "cachedResultName": "n8n demo",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1JX6YDlP4xc667Kk0teGkXuR6fmWoKdWM"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -688,
+        1072
+      ],
+      "id": "942686de-2ce7-479f-860e-41f772779350",
+      "name": "Upload File to Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "mxerDfe2zi93WNhj",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bc926580-398b-466c-8891-c98f84fc6646",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "6afd44a4-39e3-44f8-8985-4604e45355fe",
+      "name": "Image AI Output Valid"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bc926580-398b-466c-8891-c98f84fc6646",
+              "leftValue": "={{ $json.message.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        400
+      ],
+      "id": "df569d5a-95ba-49f1-b9fd-1d39dca7040a",
+      "name": "File AI Output Valid"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst input = item.json;\n\nlet raw = null;\n\n/* ------------------------------------\n   Extract Gemini text (your exact format)\n-------------------------------------*/\nif (\n  input?.content?.parts &&\n  Array.isArray(input.content.parts) &&\n  typeof input.content.parts[0]?.text === 'string'\n) {\n  raw = input.content.parts[0].text.trim();\n}\n\nif (!raw) {\n  // Nothing to parse → pass through safely\n  return [{ json: input, binary: item.binary }];\n}\n\n/* ------------------------------------\n   Parse JSON\n-------------------------------------*/\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (err) {\n  // Invalid JSON → pass through\n  return [{ json: input, binary: item.binary }];\n}\n\n/* ------------------------------------\n   Check if ALL fields are null / empty\n-------------------------------------*/\nconst fieldsToCheck = [\n  'invoice',\n  'vendor',\n  'date',\n  'due_date',\n  'description',\n  'subtotal',\n  'tax',\n  'total',\n  'email',\n  'status',\n];\n\nconst allNull = fieldsToCheck.every(\n  key => parsed[key] === null || parsed[key] === '' || parsed[key] === undefined\n);\n\nif (allNull) {\n  // ✅ All values are null → pass to next node without modification\n  return [{ json: parsed, binary: item.binary }];\n}\n\n/* ------------------------------------\n   Build markdown ONLY if data exists\n-------------------------------------*/\nconst markdown = `\n**Invoice Summary**\n\n- **Invoice #:** ${parsed.invoice || 'N/A'}\n- **Vendor:** ${parsed.vendor || 'N/A'}\n- **Date:** ${parsed.date || 'N/A'}\n- **Due Date:** ${parsed.due_date || 'N/A'}\n- **Description:** ${parsed.description || 'N/A'}\n- **Subtotal:** $${!isNaN(Number(parsed.subtotal)) ? Number(parsed.subtotal).toFixed(2) : '0.00'}\n- **Tax:** $${!isNaN(Number(parsed.tax)) ? Number(parsed.tax).toFixed(2) : '0.00'}\n- **Total:** $${!isNaN(Number(parsed.total)) ? Number(parsed.total).toFixed(2) : '0.00'}\n- **Status:** ${parsed.status || 'N/A'}\n`.trim();\n\n/* ------------------------------------\n   Return parsed + markdown\n-------------------------------------*/\nreturn [\n  {\n    json: {\n      ...parsed,\n      markdown,\n    },\n    binary: item.binary,\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        128
+      ],
+      "id": "dc350099-c82c-4805-b300-13568ebcf88a",
+      "name": "Parse Image/PDF JSON Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst input = item.json;\n\nlet raw = null;\n\n/* ------------------------------------\n   Extract Gemini text (your exact format)\n-------------------------------------*/\nif (\n  input?.content?.parts &&\n  Array.isArray(input.content.parts) &&\n  typeof input.content.parts[0]?.text === 'string'\n) {\n  raw = input.content.parts[0].text.trim();\n}\n\nif (!raw) {\n  // Nothing to parse → pass through safely\n  return [{ json: input, binary: item.binary }];\n}\n\n/* ------------------------------------\n   Parse JSON\n-------------------------------------*/\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (err) {\n  // Invalid JSON → pass through\n  return [{ json: input, binary: item.binary }];\n}\n\n/* ------------------------------------\n   Check if ALL fields are null / empty\n-------------------------------------*/\nconst fieldsToCheck = [\n  'invoice',\n  'vendor',\n  'date',\n  'due_date',\n  'description',\n  'subtotal',\n  'tax',\n  'total',\n  'email',\n  'status',\n];\n\nconst allNull = fieldsToCheck.every(\n  key => parsed[key] === null || parsed[key] === '' || parsed[key] === undefined\n);\n\nif (allNull) {\n  // ✅ All values are null → pass to next node without modification\n  return [{ json: parsed, binary: item.binary }];\n}\n\n/* ------------------------------------\n   Build markdown ONLY if data exists\n-------------------------------------*/\nconst markdown = `\n**Invoice Summary**\n\n- **Invoice #:** ${parsed.invoice || 'N/A'}\n- **Vendor:** ${parsed.vendor || 'N/A'}\n- **Date:** ${parsed.date || 'N/A'}\n- **Due Date:** ${parsed.due_date || 'N/A'}\n- **Description:** ${parsed.description || 'N/A'}\n- **Subtotal:** $${!isNaN(Number(parsed.subtotal)) ? Number(parsed.subtotal).toFixed(2) : '0.00'}\n- **Tax:** $${!isNaN(Number(parsed.tax)) ? Number(parsed.tax).toFixed(2) : '0.00'}\n- **Total:** $${!isNaN(Number(parsed.total)) ? Number(parsed.total).toFixed(2) : '0.00'}\n- **Status:** ${parsed.status || 'N/A'}\n`.trim();\n\n/* ------------------------------------\n   Return parsed + markdown\n-------------------------------------*/\nreturn [\n  {\n    json: {\n      ...parsed,\n      markdown,\n    },\n    binary: item.binary,\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        656
+      ],
+      "id": "fe87d7d8-eb2b-47ac-8bd0-36fd50577f45",
+      "name": "Parse Text Query JSON Output"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        144
+      ],
+      "id": "b5d2e8bb-9f1f-416d-87a6-1fc733bbb6c7",
+      "name": "Format Data for Airtable"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appUhPeddJfrpLYcN",
+          "mode": "list",
+          "cachedResultName": "invoice",
+          "cachedResultUrl": "https://airtable.com/appUhPeddJfrpLYcN"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbljHTLDjxLCPzGMb",
+          "mode": "list",
+          "cachedResultName": "sheet 1",
+          "cachedResultUrl": "https://airtable.com/appUhPeddJfrpLYcN/tbljHTLDjxLCPzGMb"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Total": "={{ $json.data[0].total }}",
+            "Tax": "={{ $json.data[0].tax }}",
+            "Subtotal": "={{ $json.data[0].subtotal }}",
+            "invoice": "={{ $json.data[0].invoice }}",
+            "Vendor": "={{ $json.data[0].vendor }}",
+            "Date": "={{ $json.data[0].date ? $json.data[0].date + 'T00:00:00.000Z' : '' }}",
+            "Due Date": "={{ $json.data[0].due_date }}",
+            "Discription": "={{ $json.data[0].description }}",
+            "Email": "={{ $json.data[0].email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "invoice",
+              "displayName": "invoice",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Vendor",
+              "displayName": "Vendor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Due Date",
+              "displayName": "Due Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Discription",
+              "displayName": "Discription",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Subtotal",
+              "displayName": "Subtotal",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Tax",
+              "displayName": "Tax",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1936,
+        672
+      ],
+      "id": "f4a30e12-3636-4002-a685-48022bdd0231",
+      "name": "Airtable: Create Invoice Record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1gAeh9eguUYrPWPu",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseKey": "here is the CA Response"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2224,
+        1040
+      ],
+      "id": "6204807b-212d-46d9-b7c0-72cedb743137",
+      "name": "Send Success Response"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        144,
+        1856
+      ],
+      "id": "6168a086-81b5-4080-84c2-3855406fd087",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "e2kDKLtDEE9GH8n7",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Here this agent will answer the questions related to the accountant .",
+        "height": 480,
+        "width": 640
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -48,
+        1552
+      ],
+      "typeVersion": 1,
+      "id": "76ab8088-d998-41e4-a3dd-d4bf78058a9f",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.query }}",
+        "options": {
+          "systemMessage": "You are a highly capable AI assistant that handles two distinct tasks for the user: **Data Extraction** and **Accountant Consulting**.\n\nYour response must be entirely based on the user's input. You must first determine the user's intent:\n\n1.  **If the input contains structured data/fields** (e.g., 'invoice', 'vendor', 'subtotal'), **you MUST perform Task A.**\n2.  **If the input contains a question** (e.g., 'What is...', 'How do I...'), **you MUST perform Task B.**\n\n--- TASK A: DATA EXTRACTION (JSON OUTPUT) ---\nYour sole output for this task is a valid JSON object. Do not include any conversational text or explanation.\n\nOUTPUT FORMAT:\n{\n  \"invoice\": \"string\",\n  \"vendor\": \"string\",\n  \"date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",\n  \"description\": \"string\",\n  \"subtotal\": number,\n  \"tax\": number,\n  \"total\": number,\n  \"email\": \"string\",\n  \"status\": \"string\"\n}\n\nRULES FOR TASK A:\n- **NEVER INVENT DATA.** If a field is not explicitly present in the input text, you MUST set its value to **null**.\n- Dates must be YYYY-MM-DD format.\n\n--- TASK B: ACCOUNTANT CONSULTING (TEXT OUTPUT) ---\nYour output for this task must be a professional, helpful text response. Do not use JSON.\n\nROLE: Provide clear, concise, and accurate information on accounting principles and financial terms.\nRULES FOR TASK B:\n- Directly address the user's question.\n- Use Markdown (bolding, bullet points) for readability.\n- If the query is outside the accounting scope, politely decline.\n\n--- FEW-SHOT EXAMPLES ---\n\n[START EXAMPLE 1 - EXTRACTION]\nUser: hello agent can you add the invoice in the airtable.i will be giving all the details . invoice is 000001,Vendor is Studio Shodwe,Date is 2030-06-02, Discription is 1x Banner (2x6m), 2x Poster (1x2m),Subtotal is 500, and the Total is 755, Email: raju@reallygreatsite.com\n\nAgent:\n{\n  \"invoice\": \"000001\",\n  \"vendor\": \"Studio Shodwe\",\n  \"date\": \"2030-06-02\",\n  \"due_date\": null,\n  \"description\": \"1x Banner (2x6m), 2x Poster (1x2m)\",\n  \"subtotal\": 500,\n  \"tax\": null,\n  \"total\": 755,\n  \"email\": \"raju@reallygreatsite.com\",\n  \"status\": null\n}\n[END EXAMPLE 1]\n\n[START EXAMPLE 2 - CONSULTING]\nUser: What is the difference between revenue and profit?\n\nAgent:\nThat's a great question! Here's the difference:\n\n* **Revenue** is the total income generated from selling goods or services before any expenses are taken out.\n* **Profit** (also known as net income) is what's left over after you subtract all business expenses (like cost of goods sold, operating expenses, and taxes) from the revenue.\n[END EXAMPLE 2]\n\n--- USER INPUT ---\n{{ Your input variable here }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        144,
+        1648
+      ],
+      "id": "fb0b96d6-358f-4806-a02c-1708ad8f599d",
+      "name": "CA Agent"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        864,
+        672
+      ],
+      "id": "777d7acc-102b-427c-81f6-c447d067f159",
+      "name": "Format Data for Airtable1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1984,
+        1152
+      ],
+      "id": "cc980b60-dad3-4f6c-a5b8-b70075620ee9",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a robotic data parser. Your ONLY job is to convert key-value pairs provided in the text below into a strict JSON structure. DO NOT INVENT ANY VALUES.\n\n--- INSTRUCTIONS ---\nTASK: Extract ALL fields listed in the OUTPUT FORMAT from the text provided below.\n\nOUTPUT FORMAT:\n{\n  \"invoice\": \"string\",\n  \"vendor\": \"string\",\n  \"date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",\n  \"description\": \"string\",\n  \"subtotal\": number,\n  \"tax\": number,\n  \"total\": number,\n  \"email\": \"string\",\n  \"status\": \"string\"\n}\n\nSTRICT EXTRACTION RULES:\n1.  **If the text does not explicitly mention a value for a field (e.g., 'tax', 'due_date', or 'status'), you MUST set that field's value to null.**\n2.  Dates must be ISO format (YYYY-MM-DD).\n3.  Return **ONLY** the JSON object, no additional text, and no markdown fences.\n\n--- TEXT TO PARSE ---\n\n{{ $json.body.query }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -288,
+        656
+      ],
+      "id": "538481ab-6f69-4d41-8bdc-bfe537299cc9",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "e2kDKLtDEE9GH8n7",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-robotics-er-1.5-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-robotics-er-1.5-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a robotic data parser. Your ONLY job is to convert key-value pairs provided in the text below into a strict JSON structure. DO NOT INVENT ANY VALUES.\n\n--- INSTRUCTIONS ---\nTASK: Extract ALL fields listed in the OUTPUT FORMAT from the text provided below.\n\nOUTPUT FORMAT:\n{\n  \"invoice\": \"string\",\n  \"vendor\": \"string\",\n  \"date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",\n  \"description\": \"string\",\n  \"subtotal\": number,\n  \"tax\": number,\n  \"total\": number,\n  \"email\": \"string\",\n  \"status\": \"string\"\n}\n\nSTRICT EXTRACTION RULES:\n1.  **If the text does not explicitly mention a value for a field (e.g., 'tax', 'due_date', or 'status'), you MUST set that field's value to null.**\n2.  Dates must be ISO format (YYYY-MM-DD).\n3.  Return **ONLY** the JSON object, no additional text, and no markdown fences.\n\n--- TEXT TO PARSE ---\n\n\n{{ $json.text }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        288,
+        400
+      ],
+      "id": "4842d519-9d7e-4230-b1c7-f15ddb5fa759",
+      "name": "Message a model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "e2kDKLtDEE9GH8n7",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "You are an AI assistant that extracts structured data from invoices for entry into a Airtable database. The invoices can come from any vendor or business type (e.g., cleaners, IT suppliers, consultants, utility bills, etc.).\n\nTASK: Extract the following fields from the invoice text input. Return the output as a valid JSON object. Do not include markdown code blocks, just plain JSON.\n\nOUTPUT FORMAT:\n{\n  \"invoice\": \"string\",\n  \"vendor\": \"string\",\n  \"date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",\n  \"description\": \"string\",\n  \"subtotal\": number,\n  \"tax\": number,\n  \"total\": number,\n  \"email\": \"string\"\n}\n\nRULES:\n- If any value is not available or clearly shown, return null for that field.\n- Return ONLY the JSON object, no additional text.\n- Dates must be ISO format (YYYY-MM-DD).\n- Description should combine all line items into one string (e.g. '2x keyboards, 1x monitor')",
+        "inputType": "binary",
+        "binaryPropertyName": "data00",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cccdc81f-5957-48e0-bd76-afc0e658c7b4",
+      "name": "Analyze an image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "e2kDKLtDEE9GH8n7",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "=if  {{ $json.body.query }} has some query related to accountant or any thing basic query it should be sent to normal_query Category.\nif {{ $json.body.query }}  has related to adding the invoice then you have to send this query to the Invoice_text Category.\nif {{ $json.body.query }} is about taxation then send this query to the taxation Category.\nif {{ $json.body.query }} is about the GST calculations and GST related queries then send this queries to the GST calculation category.",
+        "categories": {
+          "categories": [
+            {
+              "category": "Invoice_text",
+              "description": "={{ $json.body.query }}"
+            },
+            {
+              "category": "normal_query ",
+              "description": "={{ $json.body.query }}"
+            },
+            {
+              "category": "taxation",
+              "description": "={{ $json.body.query }}"
+            },
+            {
+              "category": "GST calculation",
+              "description": "={{ $json.body.query }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -1040,
+        672
+      ],
+      "id": "300fda1c-c1d2-4b42-9ee8-088248e9d71f",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -1728,
+        1552
+      ],
+      "id": "8eaf5700-247d-4172-a9f0-d4bb970cf49d",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "3njuwY1ebl3jpUr2",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolCalculator",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        1552
+      ],
+      "id": "98909d96-86cb-430b-9630-4ffd6c1452c9",
+      "name": "Calculator"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash-lite-preview-09-2025",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        960
+      ],
+      "id": "17019194-fea3-43fd-85f4-70304f0c0cf7",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "3njuwY1ebl3jpUr2",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -1504,
+        1712
+      ],
+      "id": "7ed256db-4424-4262-8639-4ba66428a5bb",
+      "name": "Embeddings Mistral Cloud",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "DibFVUyQARvP5sj5",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.query }}",
+        "options": {
+          "systemMessage": "=Retrive data when the user ask for relevent data about Taxation: India \nand once the data is retreived give it in a well structured and simple language in the form of answers.\n\nPRESUMPTIVE TAX EDGE-CASE RULES are missing in pincone so i give below\n\nPRESUMPTIVE TAX EDGE-CASE RULES (MANDATORY)\n\nIf business turnover is more than ₹2 crore, do NOT automatically apply Presumptive Tax.\n\nIf turnover is between ₹2 crore and ₹3 crore, you must confirm whether at least 95% of receipts are digital.\n\nIf this information is missing, ask one clarification question only and stop.\n\nDo NOT assume digital receipts.\n\nDo NOT calculate tax until eligibility is confirmed.\n\nIf the 95% digital condition is not satisfied, clearly state that Presumptive Tax is not applicable and move to Old or New Regime decision logic.\n\nNever mix Presumptive Tax logic with Old or New Regime logic in the same response.\n\nFailure to follow these rules is considered an incorrect response.",
+          "passthroughBinaryImages": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -1584,
+        1248
+      ],
+      "id": "6aa32cec-effa-437a-ae44-6167dda38402",
+      "name": "TAX AI Agent"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Retrieve data when the user asks about  Knowledge base for Indian income tax related ONLY to business and professional income for small shops, businesses, freelancers, and startups (FY 2024–25). Covers Presumptive Tax (44AD), Old and New Regimes, slabs, rebates, and regime-selection rules. Explicitly excludes salary taxation, GST, and legal filing procedures.\nonce the data is retrieved give it in a well structured and simple language in form of answers. \n",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "knowledge-base-ca-agent",
+          "mode": "list",
+          "cachedResultName": "knowledge-base-ca-agent"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        -1504,
+        1536
+      ],
+      "id": "2c543f9a-6ddb-4fed-9738-327fd60e0c70",
+      "name": "Taxation Knowlegde Base (Pinecone Vector Store)",
+      "credentials": {
+        "pineconeApi": {
+          "id": "GkXpaqf5MYAoGz7J",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $execution.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        256,
+        1952
+      ],
+      "id": "63e19a6c-63dd-4ec0-a1a1-07fc502bc52c",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $execution.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -1600,
+        1552
+      ],
+      "id": "ac1ec102-b837-427b-b937-39fb03166ad0",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $execution.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -1104,
+        1968
+      ],
+      "id": "ee01ceec-5094-42bd-adbe-21d8a32e8062",
+      "name": "GST Memory"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.query }}",
+        "options": {
+          "systemMessage": "You are a professional GST Compliance Agent for India.\n\nTASK: Help the user verify GST numbers or answer GST-related queries.\n\nIF A GST NUMBER IS PROVIDED:\n1. Extract the 15-digit GSTIN.\n2. In a real production environment, I would now call a GST Verification API.\n3. FOR NOW: Provide a simulated verification response based on the GSTIN structure:\n   - State: First 2 digits (e.g., 27 for Maharashtra, 07 for Delhi).\n   - PAN: Digits 3 to 12.\n   - Entity: 13-15.\n4. Format your response professionally as a 'GST VERIFICATION REPORT'.\n\nIF IT'S A GENERAL GST QUESTION:\n- Provide accurate information about GST slabs (5%, 12%, 18%, 28%) and filing deadlines (GSTR-1, GSTR-3B).",
+          "passthroughBinaryImages": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -832,
+        1440
+      ],
+      "id": "981f937f-e24a-4fd6-ab6b-0de807a62121",
+      "name": "GST AI Agent"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive Invoice Data from the web": {
+      "main": [
+        [
+          {
+            "node": "Has File Attached?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has File Attached?": {
+      "main": [
+        [
+          {
+            "node": "Detect File Type (Image/PDF)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload File to Drive",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect File Type (Image/PDF)": {
+      "main": [
+        [
+          {
+            "node": "is File is image or file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "is File is image or file": {
+      "main": [
+        [
+          {
+            "node": "Analyze an image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Text from PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text from PDF": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image AI Output Valid": {
+      "main": [
+        [
+          {
+            "node": "Parse Image/PDF JSON Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File AI Output Valid": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Parse Image/PDF JSON Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Image/PDF JSON Output": {
+      "main": [
+        [
+          {
+            "node": "Format Data for Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Text Query JSON Output": {
+      "main": [
+        [
+          {
+            "node": "Format Data for Airtable1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Data for Airtable": {
+      "main": [
+        [
+          {
+            "node": "Airtable: Create Invoice Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable: Create Invoice Record": {
+      "main": [
+        [
+          {
+            "node": "Send Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "CA Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CA Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Format Data for Airtable1": {
+      "main": [
+        [
+          {
+            "node": "Airtable: Create Invoice Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Send Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Parse Text Query JSON Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "File AI Output Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze an image": {
+      "main": [
+        [
+          {
+            "node": "Image AI Output Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CA Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "TAX AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GST AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "TAX AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "GST AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculator": {
+      "ai_tool": [
+        [
+          {
+            "node": "TAX AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "GST AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Mistral Cloud": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Taxation Knowlegde Base (Pinecone Vector Store)",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TAX AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Taxation Knowlegde Base (Pinecone Vector Store)": {
+      "ai_tool": [
+        [
+          {
+            "node": "TAX AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "CA Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "TAX AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GST Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "GST AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GST AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "04554f0b-c1e1-4f4b-9efd-ea89f3c353c3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9b4d11820e4a3c8d0f049d70ce1570c9344d4e05a8abb6cada2d00272fdca51a"
+  },
+  "id": "LvRoDAbWiywzrcj9",
+  "tags": []
+}

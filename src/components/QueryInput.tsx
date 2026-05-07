@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -78,11 +79,11 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
 
   const processFilesSequentially = async (files: File[]): Promise<any[]> => {
     const results = [];
-    
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       toast.info(`Processing file ${i + 1} of ${files.length}: ${file.name}`);
-      
+
       try {
         const formData = new FormData();
         formData.append('query', query);
@@ -91,7 +92,7 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
         formData.append('file_0', file);
         formData.append('fileCount', '1');
 
-        const webhookUrl = "https://undeferred-jaiden-overgenerously.ngrok-free.dev/webhook/ca-agent";
+        const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL;
         const result = await fetch(webhookUrl, {
           method: "POST",
           body: formData,
@@ -108,13 +109,13 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
 
         const data = JSON.parse(text);
         results.push({ file: file.name, response: data });
-        
+
       } catch (error) {
         console.error(`Error processing file ${file.name}:`, error);
         results.push({ file: file.name, error: error instanceof Error ? error.message : 'Unknown error' });
       }
     }
-    
+
     return results;
   };
 
@@ -169,7 +170,7 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!query.trim()) {
       toast.error("Please enter a query");
       return;
@@ -192,7 +193,7 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
         content: query,
         files: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
       };
-      
+
       await saveMessage(convId, 'user', query, userMessage.files);
       onMessagesUpdate([...messages, userMessage]);
 
@@ -202,7 +203,7 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
         // Process files sequentially
         const results = await processFilesSequentially(selectedFiles);
         responseData = { results };
-        
+
         const successCount = results.filter(r => !r.error).length;
         if (successCount === selectedFiles.length) {
           toast.success(`All ${selectedFiles.length} file(s) processed successfully!`);
@@ -216,7 +217,7 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
         formData.append('timestamp', new Date().toISOString());
         formData.append('inputType', 'text');
 
-        const webhookUrl = "https://undeferred-jaiden-overgenerously.ngrok-free.dev/webhook/ca-agent";
+        const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL;
         const result = await fetch(webhookUrl, {
           method: "POST",
           body: formData,
@@ -240,7 +241,7 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
         role: 'assistant',
         content: JSON.stringify(responseData)
       };
-      
+
       await saveMessage(convId, 'assistant', assistantMessage.content);
       onMessagesUpdate([...messages, userMessage, assistantMessage]);
 
@@ -249,11 +250,11 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', convId);
-      
+
       // Clear form
       setQuery("");
       setSelectedFiles([]);
-      
+
     } catch (error) {
       console.error("Error sending query:", error);
       toast.error("Failed to send query. Please try again.");
@@ -263,33 +264,46 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6">
-      <form onSubmit={handleSubmit} className="relative">
-        <div className="bg-secondary/50 backdrop-blur-xl border border-border rounded-2xl p-2 shadow-2xl">
-          {selectedFiles.length > 0 && (
-            <div className="px-4 pt-3 pb-2 flex flex-wrap gap-2">
-              {selectedFiles.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-lg text-sm"
-                >
-                  <span className="max-w-[200px] truncate">{file.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(index)}
-                    className="hover:bg-accent/20 rounded-full p-0.5"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+      className="w-full max-w-4xl mx-auto space-y-6 relative"
+    >
+      <form onSubmit={handleSubmit} className="relative group">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-orange-500/20 rounded-[32px] blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-700 pointer-events-none" />
+        <div className="glass-panel-heavy rounded-[32px] p-3 shadow-2xl relative transition-all duration-300 border-white/10 group-focus-within:border-primary/30 z-10">
+          <AnimatePresence>
+            {selectedFiles.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="px-4 pt-3 pb-2 flex flex-wrap gap-2"
+              >
+                {selectedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-lg text-sm"
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                    <span className="max-w-[200px] truncate">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="hover:bg-accent/20 rounded-full p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask anything related to Accounts"
-            className="w-full bg-transparent text-foreground placeholder:text-muted-foreground px-4 py-3 focus:outline-none resize-none min-h-[60px] max-h-[200px]"
+            placeholder="Ask anything related to Accounts, Taxes, or upload an invoice..."
+            className="w-full bg-transparent text-white placeholder:text-white/40 px-5 py-4 focus:outline-none resize-none min-h-[60px] max-h-[250px] text-lg"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -297,9 +311,9 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
               }
             }}
           />
-          
-          <div className="flex items-center justify-between px-2 pt-2 border-t border-border/50">
-            <div className="flex items-center gap-2">
+
+          <div className="flex items-center justify-between px-3 pt-3 pb-1 border-t border-white/10">
+            <div className="flex items-center gap-1.5">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -312,21 +326,24 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                className="h-10 w-10 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
                 disabled={isLoading}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Paperclip className="h-4 w-4" />
+                <Paperclip className="h-5 w-5" />
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className={`h-8 w-8 ${isListening ? 'text-red-500 animate-pulse' : 'text-muted-foreground'} hover:text-foreground hover:bg-secondary`}
+                className={`h-10 w-10 rounded-full transition-colors ${isListening
+                    ? 'text-red-400 bg-red-400/10 animate-pulse shadow-[0_0_15px_rgba(248,113,113,0.3)]'
+                    : 'text-white/60 hover:text-white hover:bg-white/10'
+                  }`}
                 disabled={isLoading}
                 onClick={toggleDictation}
               >
-                <Mic className="h-4 w-4" />
+                <Mic className="h-5 w-5" />
               </Button>
             </div>
 
@@ -334,22 +351,22 @@ const QueryInput = ({ conversationId, messages, onMessagesUpdate, onConversation
               <Button
                 type="submit"
                 size="icon"
-                className="h-8 w-8 bg-accent text-primary-foreground hover:bg-accent/90 rounded-lg"
+                className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-orange-500 text-primary-foreground hover:opacity-90 transition-opacity shadow-[0_0_15px_rgba(251,191,36,0.3)] hover:shadow-[0_0_20px_rgba(251,191,36,0.5)] disabled:opacity-50"
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <div className="w-4 h-4 flex items-center justify-center">
-                    <div className="w-3 h-3 border-2 border-current rounded-full"></div>
-                  </div>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 )}
               </Button>
             </div>
           </div>
         </div>
       </form>
-    </div>
+    </motion.div>
   );
 };
 
